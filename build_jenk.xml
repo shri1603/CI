@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="itmbuild" basedir="." default="all" xmlns:sonar="antlib:org.sonar.ant" >
+<property environment="env"/>
+<property name="search.string" value="itmpass" />
+<property name="glassfish.lib" location="${env.GLASSFISH_HOME}/modules" />
+<tstamp><format property="build.date" pattern="dd-MM-yyyy" /></tstamp>
+<tstamp><format property="build.year" pattern="yyyy" /></tstamp>
+<!-- <property name="dist.dir" location="${project_name}/${project_name}/${build.date}"/> -->
+<property name="dist.dir" location="/root/csid-improvements/jenkins_war/${build.year}/${project_name}/${build.date}"/>
+<!-- <property name="dest.dir" location="D:/ftp/${build.year}"/> -->
+<mkdir dir="${dist.dir}" />
+<property name="api.sim.dir" location="${basedir}/SMS_Simulators/CSI_API_SIM"/>
+<property name="imc.api.sim.dir" location="${basedir}/SMS_Simulators/CSI_IMC_API_SIM"/>
+<property name="ftp-userid" value ="root" />
+<property name="ftp-password" value="qanetweb12" />
+
+	<taskdef resource="net/sf/antcontrib/antcontrib.properties">
+			<classpath>
+				<pathelement location="D:/apache-ant-1.7.1/lib/ant-contrib-0.6.jar"/>
+	  		</classpath>
+  		</taskdef>	
+<target name="all">
+	
+	<foreach list="${module_list}" param="val" target="modulebuild"  delimiter="," inheritall="true" />
+	
+	<copy todir="${dist.dir}/" >
+	<fileset dir="${api.sim.dir}/target" erroronmissingdir="false" >
+		<include name="*" />
+	</fileset>
+	<fileset dir="${imc.api.sim.dir}/target" erroronmissingdir="false" >
+		<include name="*" />
+	</fileset>
+	</copy>
+
+	 <!-- <copydir src="${project_name}"   dest="${dest.dir}"    includes="**/*.*"     excludes=""/>
+	 
+	 	
+		<ftp 
+			server="192.168.1.131" remotedir="${dest.dir}"
+			userid="${ftp-userid}" password="${ftp-password}"
+			action="mkdir" verbose="yes">
+		</ftp>
+		<ftp 
+			server="192.168.1.131" remotedir="${dest.dir}"
+			userid="${ftp-userid}" password="${ftp-password}"
+			action="send" verbose="yes" depends="yes">
+			<fileset file="${project}" />
+		</ftp> -->
+	  
+
+	  <!-- Sonar Starts fro each module 
+	 <foreach list="${module_list}" param="val" target="sonar"  delimiter="," inheritall="true" />
+	 -->
+		<!--    
+	<scp todir="pbsdev:admin@192.168.1.131:${dest.dir}">
+		<fileset dir="${project_name}"/>
+	</scp>
+	<echo message="File copied to 192.168.1.131 @ ${dest.dir}/${project_name}/${build.date}" /> -->
+
+	
+	<!-- Sonar Execution Start -->
+	<!-- <exec executable="/bin/bash">
+      		<arg value="/opt/itmsetup/SonarAutomation/Run.sh"/>
+                	<arg value="${project_name}"/>
+                          <arg value="${basedir}"/>
+	</exec>
+	-->
+        <!-- Sonar Execution End -->
+		<echo message="---------------------------------------------------------------------------------------------------"/>
+		<echo message="---------------------------------------------------------------------------------------------------"/>
+		<echo message = "The war Files are Located at : ${build.year}/${project_name}/${build.date}" />
+		<echo message="---------------------------------------------------------------------------------------------------"/>
+		<echo message="---------------------------------------------------------------------------------------------------"/>
+
+</target>
+
+<target name="modulebuild">
+
+<echo message="Module==${val}" />
+<property name="module" location="${basedir}/${val}"/>
+
+<if><equals arg1="${val}" arg2="BatchScheduler" />
+<then>  
+<!-- build for batch -->  
+	<property name="webinf" location="${module}/ITM_BATCH"/>
+	<property name="build.dir" location="${webinf}/classes" />
+	<property name="src" location="${webinf}/src" />
+	<property name="classes" location="${webinf}/classes" />
+	<property name="classpath" location="${webinf}/lib" />	
+	<property name="test.dir" location="${webinf}/test" />
+	<property name="test.dir.classes" location="${webinf}/junit" />
+	<property name="archiveFile" location="${dist.dir}/${val}.zip" />
+
+
+	<path id="libpath">
+		<fileset dir="${classpath}"><include name="**/*.jar"/></fileset>
+		<fileset dir="${glassfish.lib}"><include name="**/*.jar"/></fileset>
+    </path>	
+	
+	<path id="unit.test.path">
+		<path refid="libpath"/>
+		<pathelement path="${classes}"/>
+		<fileset dir="${basedir}/itm/WEB-INF/resources/test"><include name="**/*.jar" /></fileset> 
+	</path>
+<!-- check ITMPASS Begin -->	
+	<fileset id="existing" dir="${module}">
+		<patternset id="files">
+		   <include name="**/*.java" />
+		   <include name="**/*.jsp" />
+		   <include name="**/*.js" />
+		   <include name="**/*.xml" />
+		   <include name="**/*.config" />
+		   <include name="**/*.properties" />
+		</patternset>
+	</fileset>
+
+		<fileset id="matches" dir="${module}">
+			<patternset refid="files" />
+			<contains text="${search.string}" casesensitive="false" />
+		</fileset>
+
+		<fail message="Found '${search.string}' in one or more files in '${module}'">
+			<condition>
+				<resourcecount when="greater" count="0" refid="matches" />
+			</condition>
+		</fail>
+<!-- check ITMPASS End -->	
+		<delete dir="${build.dir}" />	
+		<mkdir dir="${build.dir}" />
+		<javac classpathref="libpath" debug="on" srcdir="${src}" destdir="${classes}" includeantruntime="false"/>
+
+		<delete dir="${test.dir.classes}" />
+		<mkdir dir="${test.dir.classes}" />
+
+		<javac srcdir="${test.dir}" destdir="${test.dir.classes}" >
+			<classpath refid="unit.test.path"/>
+		</javac>
+		<copy todir="${classes}">
+			<fileset dir="${src}" includes="*.*" />
+		</copy>
+		
+		<delete dir="${basedir}/build/${val}" />
+		<mkdir dir="${basedir}/build/${val}/${val}" />
+		<copy todir="${basedir}/build/${val}/${val}">
+			<fileset dir="${module}">  				
+  				<exclude name="**/test/**"/>
+				<exclude name="**/junit/**"/>
+  				<exclude name="**/production/**"/>
+  				<exclude name="**/dev/**"/>
+  				<exclude name="build.xml"/>
+				<exclude name="pbsbuild.xml"/>
+			</fileset> 
+		</copy>
+		<zip destfile="${archiveFile}" basedir="${basedir}/build/${val}"/>
+</then>
+<else>
+	<!-- build for itm,web,ws,subscriberload -->
+	<property name="webinf" location="${module}/WEB-INF"/>
+	<property name="build.dir" location="${webinf}/classes" />
+	<property name="src" location="${webinf}/src" />
+	<property name="classes" location="${webinf}/classes" />
+	<property name="classpath" location="${webinf}/lib" />	
+	<property name="test.dir" location="${webinf}/test" />
+	<property name="test.dir.classes" location="${webinf}/classes/junit" />
+	<property name="archiveFile" location="${dist.dir}/${val}.war" />
+	
+		<echo message="${webinf}"/>
+		<path id="libpath">
+			<fileset dir="${classpath}"><include name="**/*.jar"/></fileset>
+			<fileset dir="${webinf}/resources/test/">
+               			<include name="javaee-api-6.0.jar"/>
+              		</fileset>
+		</path>
+		<path id="unit.test.path">
+			<path refid="libpath"/>
+			<pathelement path="${classes}"/>
+				<fileset dir="${webinf}/resources/test">
+					<include name="**/*.jar"/>
+				</fileset>
+		</path>	
+		<!-- check ITMPASS Begin -->	
+		<fileset id="existing" dir="${module}">
+			<patternset id="files">
+			   <include name="**/*.java" />
+			   <include name="**/*.jsp" />
+			   <include name="**/*.js" />
+			   <include name="**/*.xml" />
+			   <include name="**/*.config" />
+			   <include name="**/*.properties" />
+			</patternset>
+		</fileset>
+
+		<fileset id="matches" dir="${module}">
+			<patternset refid="files" />
+			<contains text="${search.string}" casesensitive="false" />
+		</fileset>
+
+		<fail message="Found '${search.string}' in one or more files in '${module}'">
+			<condition>
+				<resourcecount when="greater" count="0" refid="matches" />
+			</condition>
+		</fail>
+		<!-- check ITMPASS End -->	
+		<delete dir="${build.dir}" />
+		<mkdir dir="${build.dir}" />
+		<javac classpathref="libpath" debug="on" srcdir="${src}" destdir="${classes}" includeantruntime="false"/>
+		<delete dir="${test.dir.classes}" />
+		
+		<mkdir dir="${test.dir.classes}" />
+			<javac srcdir="${test.dir}" destdir="${test.dir.classes}" >
+				<classpath refid="unit.test.path"/>
+			</javac>
+			<copy todir="${classes}"><fileset dir="${src}" includes="*.*" /></copy>
+		
+		<war destfile="${archiveFile}" webxml="${webinf}/web.xml">
+			<fileset dir="${module}">  				
+  				<exclude name="**/test/**"/>
+				<exclude name="**/junit/**"/>
+  				<exclude name="**/production/**"/>
+  				<exclude name="**/dev/**"/>
+  				<exclude name="build.xml"/>
+			</fileset>  		
+		</war>
+    </else>
+</if>
+</target>
+
+	<!-- Add the passkey Search task -->
+	<target name="searchpass" >
+		<property name="src.dir" value="${webinf}" />
+		<property name="search.string" value="itmpass" />
+		
+		<fileset id="existing" dir="${src.dir}">
+			<patternset id="files">
+				<include name="**/*.java" />
+			</patternset>
+		</fileset>
+		<fileset id="matches" dir="${src.dir}">
+			<patternset refid="files" />
+			<contains text="${search.string}" casesensitive="false" />
+		</fileset>
+		<fail message="Found '${search.string}' in one or more files in '${src.dir}'">
+			<condition property="searchpass.found" value="true">
+				<resourcecount when="greater" count="0" refid="matches" />
+			</condition>
+		</fail>
+	</target>
+
+	<!-- Add the Sonar task -->
+     <target name="sonar"  xmlns:sonar="antlib:org.sonar.ant">
+	 
+		<!-- Define the Envviornment Variable -->
+		<property name="webinf" location="${val}/WEB-INF"/>
+		<property name="build" location="${webinf}/classes" />
+		<property name="src" location="${webinf}/src" />
+		<mkdir dir="${webinf}/build" />
+		<!-- <delete dir="${WORKSPACE}/.sonar"/>  -->		
+		 <!-- Define the SonarQube global properties (the most usual way is to pass these properties via the command line) -->
+		<property name="sonar.jdbc.url" value="jdbc:mysql://localhost:3306/sonarcube?useUnicode=true&amp;characterEncoding=utf8" />
+		<property name="sonar.jdbc.username" value="root" />
+		<property name="sonar.jdbc.password" value="netweb12" />
+		
+		<!-- Define the SonarQube project properties -->
+		<property name="sonar.projectKey" value="${project_name}:${val}:${build_version}" />
+		<property name="sonar.projectName" value="${project_name}-${val}" />
+		<property name="sonar.projectVersion" value="${build_version}" />
+		<property name="sonar.language" value="java" />
+		<property name="sonar.sources" value="${src}" />
+		<property name="sonar.binaries" value="${build}" />			
+		<!-- Tells Sonar which "tests" targets to run -->
+		<property name="sonar.jacoco.antTargets" value="test" />
+		<!-- Tells Sonar to use JaCoCo as the code coverage engine -->
+		<property name="sonar.core.codeCoveragePlugin" value="jacoco" />
+		
+		<taskdef uri="antlib:org.sonar.ant" resource="org/sonar/ant/antlib.xml">
+			<!-- Update the following line, or put the "sonar-ant-task-*.jar" file in your "$HOME/.ant/lib" folder -->
+			<classpath path="D:/apache-ant-1.7.1/lib/sonar-ant-task-*.jar" />
+		</taskdef>
+			<!-- Execute the SonarQube analysis -->
+		<sonar:sonar />
+	</target>
+	
+</project>

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="BatchScheduler FindBugs" basedir=".">
+
+	<description>BatchScheduler FindBugs</description>
+
+	<property name="webinf" location="ITM_BATCH" />
+	<property name="src" location="${webinf}/src" />
+	<property name="src.test" location="${webinf}/test" />
+	<property name="classes" location="${webinf}/classes" />
+	<property name="classes.test" location="${webinf}/classestest" />
+	<property name="classes.instrument" location="${webinf}/classesinstrument" />
+	<property name="dist" location="../dist" />
+	<property name="archiveFile" location="${dist}/itm_web.war" />
+	<property name="classpath" location="${webinf}/lib" />
+	<property name="classpath.test" location="${webinf}/resources/test" />
+	
+	<property name="resources" location="${webinf}/resources" />
+	<property name="commonProperties" location="${resources}/common/properties" />
+	<property name="junit.output.dir" value="${webinf}/junit" />
+	
+	<property name="findbugs.home" value="${webinf}/javastuff/findbugs/lib" />
+	
+	
+	<path id="findbugs-jar">
+	      <pathelement path="${findbugs.home}/findbugs-ant.jar" />
+	    </path>
+
+	<taskdef name="findbugs" classpathref="findbugs-jar" classname="edu.umd.cs.findbugs.anttask.FindBugsTask"/>
+	
+	<target name="findbugs" depends="compile">
+	   <findbugs home="${webinf}/javastuff/findbugs/lib"
+	       output="xml" outputFile="findbugs.xml" jvmargs="-Xmx1280m">
+	      <sourcePath path="${src}" />
+	       <class location="${classes}" />
+	   </findbugs>
+	</target>
+	
+	
+
+	<path id="libpath">
+		<fileset dir="${classpath}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<path id="libpath_test">
+		<fileset dir="${classpath}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${classpath.test}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<path id="test.classpath">
+		<pathelement location="${classes}" />
+		<fileset dir="${classpath}" includes="**/*.jar"/>
+		<fileset dir="${classpath.test}" includes="**/*.jar"/>
+
+		
+		
+	</path>
+
+	<target name="clean">
+		<delete dir="${classes}" />
+
+	</target>
+
+
+	<target name="init" depends="clean">
+		<mkdir dir="${classes}" />
+	</target>
+
+	<target name="prepare">
+		<copy todir="${commonProperties}" overwrite="true">
+			<fileset dir="${resources}/${system}">
+				<include name="**/*.*" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="compile" depends="init,prepare">
+		<javac classpathref="libpath" debug="on" srcdir="${src}" destdir="${classes}" includeantruntime="false" />
+	</target>
+
+
+
+</project>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<project name="Build everything" default="build">
+
+   <description>Build everything.</description>
+   <property name="dist" location="dist" />
+
+   <target name="init" depends="clean">
+    	<mkdir dir="${dist}" />
+   </target>
+
+    <target name="clean">
+    	<delete dir="${dist}" />
+        <ant dir="itm" target="clean" />
+        <ant dir="itm_web" target="clean"  />
+        <ant dir="itm_webservices" target="clean"  />
+        <ant dir="BatchScheduler" target="clean" />
+        <ant dir="SubscriberLoad_API" target="clean" />
+    </target>
+
+    <target name="test" depends="init">
+        <ant dir="itm_web" target="build">
+        	<property name="system" value="test" />
+		</ant>
+        <ant dir="itm" target="build">
+        	<property name="system" value="test" />
+		</ant>
+        <ant dir="itm_webservices" target="build">
+        	<property name="system" value="test" />
+		</ant>
+        <ant dir="SubscriberLoad_API" target="build">
+        	<property name="system" value="test" />
+		</ant>
+        <ant dir="BatchScheduler" target="build">
+        	<property name="system" value="test" />
+        </ant>
+    </target>
+
+    <target name="deploy">
+		<property name="host" value="test1.vm.csidentity.net" />
+		<exec failonerror="true" executable="scp">
+				<arg value="${dist}/itm.war" />
+				<arg value="appuser@${host}:/opt/glassfish3/glassfish/domains/domain1/autodeploy/" />
+		</exec>
+		<exec failonerror="true" executable="scp">
+				<arg value="${dist}/itm_web.war" />
+				<arg value="appuser@${host}:/opt/glassfish3/glassfish/domains/domain1/autodeploy/" />
+		</exec>
+		<exec failonerror="true" executable="scp">
+				<arg value="${dist}/itm_webservices.war" />
+				<arg value="appuser@${host}:/opt/glassfish3/glassfish/domains/domain1/autodeploy/" />
+		</exec>
+		<exec failonerror="true" executable="scp">
+				<arg value="${dist}/SubscriberLoad_API.war" />
+				<arg value="appuser@${host}:/opt/glassfish3/glassfish/domains/domain1/autodeploy/" />
+		</exec>
+    </target>
+
+    <target name="deploy_dev">
+		<property name="host" value="test3.vm.csidentity.net" />
+		<exec failonerror="true" executable="scp">
+				<arg value="${dist}/itm.war" />
+				<arg value="appuser@${host}:/opt/glassfish3/glassfish/domains/domain1/autodeploy/" />
+		</exec>
+		<exec failonerror="true" executable="scp">
+				<arg value="${dist}/itm_web.war" />
+				<arg value="appuser@${host}:/opt/glassfish3/glassfish/domains/domain1/autodeploy/" />
+		</exec>
+		<exec failonerror="true" executable="scp">
+				<arg value="${dist}/itm_webservices.war" />
+				<arg value="appuser@${host}:/opt/glassfish3/glassfish/domains/domain1/autodeploy/" />
+		</exec>
+		<exec failonerror="true" executable="scp">
+				<arg value="${dist}/SubscriberLoad_API.war" />
+				<arg value="appuser@${host}:/opt/glassfish3/glassfish/domains/domain1/autodeploy/" />
+		</exec>
+    </target>
+
+    <target name="production" depends="init">
+        <ant dir="itm" target="build">
+        	<property name="system" value="production" />
+        </ant>
+        <ant dir="itm_web" target="build">
+        	<property name="system" value="production" />
+        </ant>
+        <ant dir="itm_webservices" target="build">
+        	<property name="system" value="production" />
+        </ant>
+        <ant dir="SubscriberLoad_API" target="build">
+        	<property name="system" value="production" />
+        </ant>
+        <ant dir="BatchScheduler" target="build">
+        	<property name="system" value="production" />
+        </ant>
+    </target>
+
+    <target name="dev" depends="init">
+        <ant dir="itm" target="build">
+        	<property name="system" value="dev" />
+        </ant>
+        <ant dir="itm_web" target="build">
+        	<property name="system" value="dev" />
+        </ant>
+        <ant dir="itm_webservices" target="build">
+        	<property name="system" value="dev" />
+        </ant>
+        <ant dir="SubscriberLoad_API" target="build">
+        	<property name="system" value="dev" />
+        </ant>
+        <ant dir="BatchScheduler" target="build">
+        	<property name="system" value="dev" />
+        </ant>
+    </target>
+</project>

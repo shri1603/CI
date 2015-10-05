@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<project name="Batch build" basedir="." >
+
+	<description>BatchScheduler build.</description>
+
+	<property name="webinf" location="ITM_BATCH"/>
+	<property name="src" location="${webinf}/src" />
+	<property name="src.test" location="${webinf}/test" />
+	<property name="classes" location="${webinf}/classes" />
+	<property name="classes.test" location="${webinf}/classestest" />
+	<property name="classpath.test" location="${webinf}/resources/test" />
+	<property name="dist" location="../dist" />
+	<property name="archiveFile" location="${dist}/BatchScheduler.jar" />
+	<property name="classpath" location="${webinf}/lib" />
+	<property name="resources" location="${webinf}/resources" />
+	<property name="common" location="${resources}/common/" />
+	<property name="commonProperties" location="${resources}/common/properties" />
+	<property name="junit.output.dir" value="${webinf}/junit" />
+
+	<property name="coveragereport.dir" value="${webinf}/cobertura" />
+	<property name="cobertura.dir" value="${webinf}/javastuff/cobertura/lib" />
+	
+	<path id="libpath">
+            <fileset dir="${classpath}">
+                <include name="**/*.jar"/>
+            </fileset>
+        </path>
+
+	<path id="libpath_test">
+		<fileset dir="${classpath}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${classpath.test}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+	
+	<path id="test.classpath">
+			<pathelement location="${classes}" />
+			<fileset dir="${classpath}" includes="**/*.jar"/>
+			<fileset dir="${classpath.test}" includes="**/*.jar"/>
+		</path>
+
+
+		<path id="cobertura.classpath">
+			<fileset dir="${classpath}" includes="**/*.jar"/>
+			<fileset dir="${cobertura.dir}">
+				<include name="*.jar" />
+				<exclude name="**/javaee-api-6.0.jar"/>
+			</fileset>
+		</path>
+
+		<taskdef classpathref="cobertura.classpath" resource="tasks.properties" />
+
+
+		<target name="instrument" depends="compile_test">
+			<delete file="cobertura.ser" />
+
+			<cobertura-instrument todir="${classes.instrument}">
+				<ignore regex="org.apache.log4j.*" />
+				<fileset dir="${classes}">
+					<include name="**/*.class" />
+					<exclude name="**/*Test*.class" />
+				</fileset>
+			</cobertura-instrument>
+			<copy todir="${classes.instrument}">
+				<fileset dir="${src}" casesensitive="yes">
+				</fileset>
+				<fileset dir="${src.test}" casesensitive="yes">
+				</fileset>
+			</copy>
+		</target>
+
+	
+	<target name="prepare">
+		<copy todir="${commonProperties}" overwrite="true">
+    		    <fileset dir="${resources}/${system}">
+    		         <include name="**/*.*"/>
+    		    </fileset>
+		</copy>
+		<copy todir="${common}" overwrite="true">
+                    <fileset dir="${commonProperties}/">
+                         <include name="**/sslcert/**"/>
+                    </fileset>
+                </copy>
+	</target>
+
+	<target name="copycrypt">
+		<copy todir="${classes}" overwrite="true">
+			<fileset dir="${resources}/${system}">
+				<include name="crypt.properties" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="clean" >
+		<delete dir="${classes}" />
+		<exec executable="svn">
+		<arg value="-R"/>
+		<arg value="revert"/>
+		<arg value="${commonProperties}"/>
+		</exec>
+	</target>
+
+	<target name="compile" depends="init,prepare,copycrypt">
+		<javac nowarn="on"
+		       classpathref="libpath"
+			   debug="on"
+			   srcdir="${src}"
+			   destdir="${classes}" 
+			   includeantruntime="false"/>
+	</target>
+	
+	<target name="compile_test" depends="compile">
+			<javac classpathref="libpath_test" srcdir="${src.test}" destdir="${classes}" includeantruntime="false" />
+		</target>
+
+
+	<target name="build" depends="compile">
+		<jar destfile="${archiveFile}" 
+			 basedir="${basedir}" 
+  			 excludes="**/src/**, build.xml, **/test/**, **/production/**, **/breach/**, **/dev/**"/> 
+	</target>
+
+	<target name="init" depends="clean">
+		<mkdir dir="${classes}" />
+	</target>
+	
+	<target name="test" depends="compile_test">
+		<mkdir dir="${junit.output.dir}" />
+		<junit fork="true" printsummary="yes" showoutput="yes">
+			<formatter type="xml" />
+			<classpath refid="test.classpath" />
+			<batchtest todir="${junit.output.dir}">
+				<fileset dir="${src.test}">
+					<include name="**/*Test.java" />
+				</fileset>
+			</batchtest>
+		</junit>
+	</target>
+
+	<target name="test_instr" depends="instrument">
+		<mkdir dir="${junit.output.dir}" />
+		<junit fork="true" printsummary="yes" showoutput="yes">
+			<jvmarg value="-XX:MaxPermSize=512m"/>
+			<jvmarg value="-Xms1024M"/>
+			<sysproperty key="net.sourceforge.cobertura.datafile"
+				file="cobertura.ser" />
+
+			<classpath location="${classes.instrument}" />
+			<classpath location="${classes}" />
+
+			<classpath refid="cobertura.classpath" />
+			<classpath refid="libpath_test" />
+
+			<formatter type="xml" />
+			<batchtest todir="${junit.output.dir}">
+				<fileset dir="${src.test}">
+					<include name="**/*Test*.java" />
+					<exclude name="**/*TestSuite*" />
+				</fileset>
+			</batchtest>
+		</junit>
+		<cobertura-report format="xml" destdir="${coveragereport.dir}" srcdir="${src}" />
+	</target>
+</project>
